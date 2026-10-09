@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+.DS_Store
+.idea/
+.vscode/
+# face models are downloaded by scripts/fetch_models.py (research-only licence)
+models/
+# CLI outputs
+*.svdz
+codes.txt

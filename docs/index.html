@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SVD Image Lab</title>
+<meta name="description" content="Compress any photo with the singular value decomposition, live in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a workbench. Controls on top, three image panes, then the spectrum and the layer explorer. */
+:root{
+  --bg:#f3f5f8; --panel:#fff; --ink:#141821; --ink-2:#4a5263; --ink-3:#7a8294; --line:#dde2ea;
+  --accent:#2a52be; --accent-ink:#fff; --s1:#2a78d6; --s2:#eb6834;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Public Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#11141a; --panel:#191d25; --ink:#eef0f4; --ink-2:#b8bfcc; --ink-3:#8790a1; --line:#2b313d;
+  --accent:#7d9bff; --accent-ink:#0d1020; --s1:#3987e5; --s2:#d95926; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body)}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 16px 64px;display:flex;flex-direction:column;gap:24px}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:clamp(28px,5vw,42px)}
+h2{font-size:20px}
+p{margin:0;max-width:70ch}
+a{color:var(--accent)}
+.eyebrow{font:600 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.lede{color:var(--ink-2)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:600 13px var(--f-body);border-radius:8px;padding:8px 12px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs button{padding:0;border:2px solid var(--line);border-radius:8px;background:none;cursor:pointer;overflow:hidden;width:64px;height:64px}
+.thumbs button[aria-pressed="true"]{border-color:var(--accent)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+select{font:13px var(--f-body);padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.panes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.pane{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pane canvas{width:100%;height:auto;border-radius:6px;background:var(--line);image-rendering:auto}
+.pane .lbl{font:600 12px var(--f-mono);color:var(--ink-2)}
+.slider{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.kval{font:700 28px var(--f-mono);min-width:5ch}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{border-top:1px solid var(--line);padding-top:8px}
+.stat b{display:block;font:600 20px var(--f-mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--ink-3)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.chart canvas{width:100%;height:220px;display:block}
+.note{font-size:13px;color:var(--ink-3)}
+.warn{color:var(--s2);font-weight:600}
+#status{font:600 12px var(--f-mono);color:var(--ink-3)}
+.progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+footer{color:var(--ink-3);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <span class="eyebrow">Linear algebra · image compression</span>
+    <h1>SVD Image Lab</h1>
+    <p class="lede">Every photo is a matrix. The singular value decomposition splits it into layers σ<sub>i</sub> u<sub>i</sub> v<sub>i</sub><sup>T</sup>, sorted from most to least important. Keep the first <i>k</i> and throw the rest away. Everything below runs in your browser; your photo never leaves your device.</p>
+    <div class="row"><a href="benchmark/">Take the human-vs-machine test →</a><a href="https://github.com/nithisvraja-droid/svd-image-lab">Code on GitHub →</a></div>
+  </header>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2>1 · Pick a photo</h2>
+      <span id="status">loading…</span>
+    </div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="row">
+      <label class="btn" for="upload">Upload your own</label>
+      <input type="file" id="upload" accept="image/*" hidden>
+      <label class="note" for="size">Working size</label>
+      <select id="size"><option value="256" selected>256 px (fast)</option><option value="384">384 px</option><option value="512">512 px (slow)</option></select>
+    </div>
+    <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+  </section>
+
+  <section class="card">
+    <h2>2 · Choose how many layers to keep</h2>
+    <div class="slider">
+      <span class="kval" id="kval">k = 20</span>
+      <input type="range" id="k" min="1" max="256" value="20" aria-label="number of layers k">
+      <button class="btn" id="play">▶ Play</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-store">–</b><span>numbers stored vs raw pixels</span></div>
+      <div class="stat"><b id="st-file">–</b><span>8-bit .svdz file vs raw pixels</span></div>
+      <div class="stat"><b id="st-energy">–</b><span>energy kept</span></div>
+      <div class="stat"><b id="st-psnr">–</b><span>PSNR (higher is better)</span></div>
+      <div class="stat"><b id="st-err">–</b><span>relative error</span></div>
+    </div>
+    <p class="note" id="breakeven"></p>
+    <div class="panes">
+      <div class="pane"><span class="lbl">original</span><canvas id="c-orig"></canvas></div>
+      <div class="pane"><span class="lbl" id="lbl-rec">rank k</span><canvas id="c-rec"></canvas></div>
+      <div class="pane"><span class="lbl">residual × 3 (what was thrown away)</span><canvas id="c-res"></canvas></div>
+    </div>
+  </section>
+
+  <section class="two">
+    <div class="card chart"><h2>Singular values</h2><p class="note">σ<sub>i</sub> / σ<sub>1</sub>, log scale. The orange line marks k.</p><canvas id="ch-s"></canvas></div>
+    <div class="card chart"><h2>Energy kept</h2><p class="note">(σ<sub>1</sub>² + … + σ<sub>k</sub>²) / Σσ². The first layer is mostly the average colour, so this rises very fast.</p><canvas id="ch-e"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2>3 · Look at one layer</h2>
+    <div class="slider">
+      <span class="kval" id="ival">i = 1</span>
+      <input type="range" id="i" min="1" max="30" value="1" aria-label="layer index i">
+      <span class="mono note" id="isig"></span>
+    </div>
+    <div class="panes" style="grid-template-columns:repeat(auto-fit,minmax(240px,380px))">
+      <div class="pane"><span class="lbl">layer i alone (rescaled to be visible)</span><canvas id="c-layer"></canvas></div>
+      <div class="pane"><span class="lbl">layers 1 … i added up</span><canvas id="c-sum"></canvas></div>
+    </div>
+    <p class="note">Each layer is an outer product: a column pattern times a row pattern, which is why single layers look like plaid.</p>
+  </section>
+
+  <footer>Built for the Mathematics for Intelligent Systems – I course project, Amrita Vishwa Vidyapeetham. Sample images from scikit-image.</footer>
+</div>
+
+<script src="svd.js"></script>
+<script>
+(() => {
+const SAMPLES = ["astronaut", "coffee", "chelsea", "rocket", "text", "gravel", "colorwheel"];
+const $ = (s) => document.querySelector(s);
+let D = null, img = null, M = 0, N = 0, jobId = 0;
+
+// ---------- sample picker ----------
+SAMPLES.forEach((name, idx) => {
+  const b = document.createElement("button");
+  b.innerHTML = `<img src="assets/${name}.png" alt="${name}">`;
+  b.title = name; b.setAttribute("aria-pressed", idx === 0);
+  b.onclick = () => { document.querySelectorAll(".thumbs button").forEach((x) => x.setAttribute("aria-pressed", x === b)); loadURL(`assets/${name}.png`); };
+  $("#thumbs").appendChild(b);
+});
+$("#upload").onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  document.querySelectorAll(".thumbs button").forEach((x) => x.setAttribute("aria-pressed", false));
+  loadURL(URL.createObjectURL(f));
+};
+$("#size").onchange = () => img && prepare(img);
+
+function loadURL(url) {
+  const im = new Image();
+  im.onload = () => { img = im; prepare(im); };
+  im.onerror = () => status("couldn't read that image");
+  im.src = url;
+}
+const status = (t) => ($("#status").textContent = t);
+
+// ---------- decompose in three workers (one per colour channel) ----------
+function prepare(im) {
+  const max = +$("#size").value, sc = Math.min(1, max / Math.max(im.width, im.height));
+  N = Math.round(im.width * sc); M = Math.round(im.height * sc);
+  const c = document.createElement("canvas"); c.width = N; c.height = M;
+  const ctx = c.getContext("2d"); ctx.drawImage(im, 0, 0, N, M);
+  const px = ctx.getImageData(0, 0, N, M).data;
+  const chans = [0, 1, 2].map((ch) => { const a = new Float64Array(M * N); for (let i = 0; i < M * N; i++) a[i] = px[i * 4 + ch] / 255; return a; });
+  draw($("#c-orig"), chans);
+  const id = ++jobId, t0 = performance.now(), done = [null, null, null], prog = [0, 0, 0];
+  status(`decomposing ${N} × ${M}…`); $("#bar").style.width = "5%";
+  chans.forEach((a, ch) => {
+    const w = new Worker("svd.js");
+    w.onmessage = (e) => {
+      if (id !== jobId) return w.terminate();
+      if (e.data.progress) { prog[ch] = e.data.progress.sweep; $("#bar").style.width = Math.min(95, 5 + (prog[0] + prog[1] + prog[2]) / 30 * 90) + "%"; return; }
+      done[ch] = e.data.result[0]; w.terminate();
+      if (done.every(Boolean)) {
+        D = done; D.orig = chans;
+        $("#bar").style.width = "100%";
+        status(`${N} × ${M} px · rank ${D[0].r} · SVD in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+        setup();
+      }
+    };
+    w.postMessage({ id, channels: [a], m: M, n: N });
+  });
+}
+
+// ---------- rendering ----------
+function draw(cv, chans, map) {
+  cv.width = N; cv.height = M;
+  const ctx = cv.getContext("2d"), out = ctx.createImageData(N, M), d = out.data;
+  for (let i = 0; i < M * N; i++) {
+    for (let c = 0; c < 3; c++) { let v = chans[c][i]; if (map) v = map(v, c); d[i * 4 + c] = v <= 0 ? 0 : v >= 1 ? 255 : v * 255 + 0.5; }
+    d[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(out, 0, 0);
+}
+let cache = null; // running partial sums so dragging the slider up is incremental
+function rankK(k) {
+  if (!cache || k < cache.k) cache = { k: 0, sums: D.map(() => new Float64Array(M * N)) };
+  D.forEach((d, c) => SVD.addLayers(d, cache.sums[c], cache.k, k));
+  cache.k = k;
+  return cache.sums;
+}
+
+function setup() {
+  cache = null;
+  const r = D[0].r;
+  $("#k").max = r; if (+$("#k").value > r) $("#k").value = Math.min(20, r);
+  $("#i").max = Math.min(r, 50);
+  const be = Math.floor(M * N / (M + N + 1));
+  $("#breakeven").innerHTML = `Break-even: above <b>k = ${be}</b> the layers take more numbers than the photo itself (k × (${M} + ${N} + 1) > ${M} × ${N}).`;
+  update(); layer(); charts();
+}
+
+function update() {
+  if (!D) return;
+  const k = +$("#k").value;
+  const rec = rankK(k);
+  $("#kval").textContent = `k = ${k}`; $("#lbl-rec").textContent = `rank ${k}`;
+  draw($("#c-rec"), rec);
+  const res = D.orig.map((o, c) => o.map((v, i) => 0.5 + 3 * (v - rec[c][i])));
+  draw($("#c-res"), res);
+  let se = 0, so = 0;
+  D.orig.forEach((o, c) => { for (let i = 0; i < M * N; i++) { const r = Math.min(1, Math.max(0, rec[c][i])); se += (o[i] - r) ** 2; so += o[i] ** 2; } });
+  const mse = se / (3 * M * N), psnr = 10 * Math.log10(1 / mse);
+  const store = k * (M + N + 1) / (M * N), file = k * (M + N + 12) / (M * N);
+  const en = D.reduce((a, d) => a + d.s.slice(0, k).reduce((x, s) => x + s * s, 0), 0) / D.reduce((a, d) => a + d.s.reduce((x, s) => x + s * s, 0), 0);
+  $("#st-store").innerHTML = (store * 100).toFixed(1) + "%" + (store > 1 ? ' <span class="warn">bigger!</span>' : "");
+  $("#st-file").textContent = (file * 100).toFixed(1) + "%";
+  $("#st-energy").textContent = (en * 100).toFixed(2) + "%";
+  $("#st-psnr").textContent = isFinite(psnr) ? psnr.toFixed(1) + " dB" : "∞";
+  $("#st-err").textContent = (100 * Math.sqrt(se / so)).toFixed(1) + "%";
+  charts();
+}
+function layer() {
+  if (!D) return;
+  const i = +$("#i").value;
+  $("#ival").textContent = `i = ${i}`;
+  $("#isig").textContent = `σ ≈ ${(D.reduce((a, d) => a + d.s[i - 1], 0) / 3).toFixed(2)}`;
+  const L = D.map((d) => SVD.addLayers(d, new Float64Array(M * N), i - 1, i));
+  let lo = Infinity, hi = -Infinity; L.forEach((a) => a.forEach((v) => { if (v < lo) lo = v; if (v > hi) hi = v; }));
+  draw($("#c-layer"), L, (v) => (v - lo) / (hi - lo || 1));
+  draw($("#c-sum"), D.map((d) => SVD.addLayers(d, new Float64Array(M * N), 0, i)));
+}
+
+// ---------- small charts ----------
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function plot(cv, ys, opt) {
+  const dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr);
+  const L = 44, R = 10, T = 8, B = 26, iw = W - L - R, ih = H - T - B;
+  const n = ys.length, X = (i) => L + (i / (n - 1)) * iw;
+  const Y = opt.log ? (v) => T + (1 - (Math.log10(Math.max(v, 10 ** opt.lo)) - opt.lo) / (opt.hi - opt.lo)) * ih : (v) => T + (1 - (v - opt.lo) / (opt.hi - opt.lo)) * ih;
+  g.font = `11px ${css("--f-mono")}`; g.fillStyle = css("--ink-3"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  opt.ticks.forEach(([v, lab]) => { const y = opt.log ? T + (1 - (v - opt.lo) / (opt.hi - opt.lo)) * ih : Y(v); g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke(); g.textAlign = "right"; g.fillText(lab, L - 6, y + 4); });
+  g.textAlign = "center"; [1, Math.round(n / 4), Math.round(n / 2), Math.round(3 * n / 4), n].forEach((k) => g.fillText(k, X(k - 1), H - 8));
+  g.strokeStyle = css("--s1"); g.lineWidth = 2; g.beginPath();
+  ys.forEach((v, i) => (i ? g.lineTo(X(i), Y(v)) : g.moveTo(X(i), Y(v)))); g.stroke();
+  const k = +$("#k").value; g.strokeStyle = css("--s2"); g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(k - 1), T); g.lineTo(X(k - 1), T + ih); g.stroke();
+}
+function charts() {
+  if (!D) return;
+  const r = D[0].r, s = Array.from({ length: r }, (_, i) => Math.sqrt(D.reduce((a, d) => a + d.s[i] ** 2, 0)));
+  plot($("#ch-s"), s.map((v) => v / s[0]), { log: true, lo: -4, hi: 0, ticks: [[0, "1"], [-1, "0.1"], [-2, "0.01"], [-3, "1e-3"], [-4, "1e-4"]] });
+  const tot = s.reduce((a, v) => a + v * v, 0); let c = 0;
+  const e = s.map((v) => (c += v * v) / tot), lo = Math.floor(e[0] * 10) / 10;
+  plot($("#ch-e"), e, { lo, hi: 1, ticks: [[lo, lo.toFixed(1)], [(lo + 1) / 2, ((lo + 1) / 2).toFixed(2)], [1, "1.0"]] });
+}
+
+$("#k").oninput = update; $("#i").oninput = layer;
+let timer = null;
+$("#play").onclick = () => {
+  if (timer) { clearInterval(timer); timer = null; $("#play").textContent = "▶ Play"; return; }
+  $("#play").textContent = "❚❚ Pause"; $("#k").value = 1; update();
+  timer = setInterval(() => { const k = +$("#k").value + 1; if (k > Math.min(80, +$("#k").max)) { $("#play").click(); return; } $("#k").value = k; update(); }, 120);
+};
+addEventListener("resize", charts);
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", charts);
+loadURL("assets/astronaut.png");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "svdlab"
+version = "1.0.0"
+description = "Image compression with the singular value decomposition, plus a human-vs-machine perception benchmark"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "Nithis V. R." }, { name = "Pragna" }, { name = "Dimple" }, { name = "Pavitraa" }]
+dependencies = ["numpy>=1.24", "scikit-image>=0.21", "matplotlib>=3.7", "pillow>=10.0"]
+
+[project.optional-dependencies]
+faces = ["opencv-python-headless>=4.8", "onnxruntime>=1.16"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+svdlab = "svdlab.__main__:main"
+
+[tool.setuptools]
+packages = ["svdlab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

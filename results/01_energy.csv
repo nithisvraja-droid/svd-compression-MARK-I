@@ -1,0 +1,8 @@
+image,kind,height,width,k_90,k_95,k_99,k_999,break_even_k
+astronaut,portrait (face),512,512,4,9,36,129,255
+coffee,smooth photo,400,600,2,5,42,177,239
+chelsea,fur texture,300,451,1,2,13,71,179
+rocket,sky and structure,427,640,1,2,38,153,255
+text,printed text,172,448,1,1,15,55,124
+gravel,pure texture,512,512,1,16,77,204,255
+colorwheel,flat synthetic,370,371,1,1,2,4,185
