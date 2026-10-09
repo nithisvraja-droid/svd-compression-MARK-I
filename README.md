@@ -1,9 +1,9 @@
-# SVD Image Lab
+# SVD Compression MARK I
 
 **Compress photos with the singular value decomposition, see exactly what you lose, and find out whether people and machines agree on when a compressed face becomes recognisable.**
 
-[**▶ Live demo**](https://nithisvraja-droid.github.io/svd-image-lab/) — drag a slider, upload your own photo, watch the layers add up. Runs in the browser.
-[**▶ Human-vs-machine test**](https://nithisvraja-droid.github.io/svd-image-lab/benchmark/) — 3 minutes, tells you your own thresholds.
+[**▶ Live demo**](https://nithisvraja-droid.github.io/svd-compression-MARK-I/) — drag a slider, upload your own photo, watch the layers add up. Runs in the browser.
+[**▶ Human-vs-machine test**](https://nithisvraja-droid.github.io/svd-compression-MARK-I/benchmark/) — 3 minutes, tells you your own thresholds.
 
 ![Astronaut photo rebuilt from 1, 5, 20 and 50 SVD layers](figures/03_gallery.png)
 
@@ -39,8 +39,8 @@ Keeping only the first *k* layers gives the best possible rank-*k* approximation
 ## Quick start
 
 ```bash
-git clone https://github.com/nithisvraja-droid/svd-image-lab.git
-cd svd-image-lab
+git clone https://github.com/nithisvraja-droid/svd-compression-MARK-I.git
+cd svd-compression-MARK-I
 pip install -r requirements.txt
 
 python -m svdlab info photo.jpg                 # spectrum summary + break-even ranks
@@ -153,7 +153,7 @@ Pixel metrics say nothing about *recognition*, so the benchmark splits it into t
 
 On the portrait used in our course slides the same pipeline gave k = 7, 13 and 120. The detector is not monotonic: on the astronaut it briefly rises at k = 5–6, drops, then locks on at k = 15.
 
-**Human side:** [take the test](https://nithisvraja-droid.github.io/svd-image-lab/benchmark/). Part 1 reveals the photo layer by layer (method of limits); Part 2 asks "which is the original?" 24 times (two-alternative forced choice). Each run ends with a result code. Collect codes in a text file and run
+**Human side:** [take the test](https://nithisvraja-droid.github.io/svd-compression-MARK-I/benchmark/). Part 1 reveals the photo layer by layer (method of limits); Part 2 asks "which is the original?" 24 times (two-alternative forced choice). Each run ends with a result code. Collect codes in a text file and run
 
 ```bash
 python scripts/analyse_human.py codes.txt
