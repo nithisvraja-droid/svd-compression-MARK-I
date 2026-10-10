@@ -179,10 +179,6 @@ tests/             unit tests (Python) + JavaScript SVD test
 REPORT.md          full write-up
 ```
 
-## Team
-
-Course project for **Mathematics for Intelligent Systems – I**, School of AI, Amrita Vishwa Vidyapeetham, Coimbatore (2026).
-Nithis V. R. · Pragna · Dimple · Pavitraa
 
 ## References
 
